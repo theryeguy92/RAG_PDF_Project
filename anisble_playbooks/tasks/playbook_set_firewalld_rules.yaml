@@ -10,6 +10,14 @@
     state: started
     enabled: true
 
+- name: "Ensure port 22 is open"
+  firewalld:
+    port: 22/tcp
+    permanent: yes
+    state: enabled
+  become: true
+
+
 - name: "Allow SSH through the firewall"
   firewalld:
     service: ssh
