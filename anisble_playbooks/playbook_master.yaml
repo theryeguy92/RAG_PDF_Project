@@ -1,4 +1,5 @@
----
+# playbook_master.yaml
+
 # Author: Aniruddha Gokhale
 # CS4287/5287 Principles of Cloud Computing
 # Created: Fall 2024
@@ -54,27 +55,29 @@
       os_floating_ip:
         cloud: "{{ openstack_cloud }}"
         server: "{{ item.server.id }}"
-        network: "public"  # Replace with the actual public network name if different
+        network: "public"
         reuse: yes
       loop: "{{ vm_info.results }}"
       register: floating_ips
 
-    - name: "Extract floating IPs of VMs"
-      set_fact:
-        vm_ips_dict: >-
-          {{
-            dict(
-              floating_ips.results
-              | map(attribute='server.name')
-              | zip(floating_ips.results | map(attribute='floating_ip.ip'))
-            )
-          }}
-
-    - name: "Debug vm_ips_dict with floating IPs"
+    - name: "Debug floating_ips structure"
       debug:
-        var: vm_ips_dict
+        var: floating_ips
 
-    - name: "Add new VMs to in-memory inventory (CloudVMs group)"
+    - name: "Debug VM addresses structure to identify internal IPs"
+      debug:
+        var: item.server.addresses
+      loop: "{{ vm_info.results }}"
+
+    - name: "Extract internal IPs of VMs"
+      set_fact:
+        vm_internal_ips_dict: "{{ dict(vm_info.results | map(attribute='server.addresses.CH-822922-net[0].addr') | zip(vm_info.results | map(attribute='server.name')) | map('reverse') | list) }}"
+
+    - name: "Debug vm_internal_ips_dict with internal IPs"
+      debug:
+        var: vm_internal_ips_dict
+
+    - name: "Add new VMs to in-memory inventory with internal IPs (CloudVMs group)"
       add_host:
         name: "{{ item.key }}"
         ansible_host: "{{ item.value }}"
@@ -82,7 +85,7 @@
         ansible_ssh_private_key_file: "{{ ansible_ssh_private_key_file }}"
         ansible_ssh_common_args: "{{ ansible_ssh_common_args }}"
         groups: CloudVMs
-      loop: "{{ vm_ips_dict | dict2items }}"
+      loop: "{{ vm_internal_ips_dict | dict2items }}"
 
 ###############################################################
 ### Play 3: Gather facts from Cloud VMs
