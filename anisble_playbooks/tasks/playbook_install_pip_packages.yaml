@@ -1,0 +1,6 @@
+---
+- name: "Install required pip packages"
+  pip:
+    name:
+      - kafka-python
+      - requests

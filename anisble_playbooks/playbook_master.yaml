@@ -1,0 +1,173 @@
+---
+# Author: Aniruddha Gokhale
+# CS4287/5287 Principles of Cloud Computing
+# Created: Fall 2024
+
+# Purpose: Provide a master playbook that imports individual tasks.
+
+################################################################
+### Play 1: Check if required variables are defined.
+################################################################
+
+- name: "Check if required variables are defined"
+  hosts: LocalMC
+  remote_user: "{{ local_user }}"
+  gather_facts: no
+  collections:
+    - ansible.builtin
+
+  tasks:
+    - import_tasks: tasks/playbook_check_variables.yaml
+
+###############################################################
+### Play 2: Create VMs on the Cloud and Update Inventory
+###############################################################
+
+- name: "Create VMs on Chameleon"
+  hosts: LocalMC
+  remote_user: "{{ local_user }}"
+  gather_facts: no
+  become: false
+  collections:
+    - ansible.builtin
+    - openstack.cloud
+
+  tasks:
+    - name: "Create VMs using OpenStack"
+      os_server:
+        state: present
+        cloud: "{{ openstack_cloud }}"
+        name: "{{ item.name }}"
+        image: "{{ cloud_image_name }}"
+        flavor: "{{ cloud_flavor }}"
+        network: "{{ vm_network_name }}"
+        key_name: "{{ ssh_key_name }}"
+        wait: yes
+      loop:
+        - { name: 'vm1_team2' }
+        - { name: 'vm2_team2' }
+        - { name: 'vm3_team2' }
+        - { name: 'vm4_team2' }
+      register: vm_info
+
+    - name: "Allocate and associate floating IPs"
+      os_floating_ip:
+        cloud: "{{ openstack_cloud }}"
+        server: "{{ item.server.id }}"
+        network: "public"  # Replace with the actual public network name if different
+        reuse: yes
+      loop: "{{ vm_info.results }}"
+      register: floating_ips
+
+    - name: "Extract floating IPs of VMs"
+      set_fact:
+        vm_ips_dict: >-
+          {{
+            dict(
+              floating_ips.results
+              | map(attribute='server.name')
+              | zip(floating_ips.results | map(attribute='floating_ip.ip'))
+            )
+          }}
+
+    - name: "Debug vm_ips_dict with floating IPs"
+      debug:
+        var: vm_ips_dict
+
+    - name: "Add new VMs to in-memory inventory (CloudVMs group)"
+      add_host:
+        name: "{{ item.key }}"
+        ansible_host: "{{ item.value }}"
+        ansible_user: "{{ cloud_user }}"
+        ansible_ssh_private_key_file: "{{ ansible_ssh_private_key_file }}"
+        ansible_ssh_common_args: "{{ ansible_ssh_common_args }}"
+        groups: CloudVMs
+      loop: "{{ vm_ips_dict | dict2items }}"
+
+###############################################################
+### Play 3: Gather facts from Cloud VMs
+###############################################################
+
+- name: "Perform fact gathering on Cloud VMs"
+  hosts: CloudVMs
+  remote_user: "{{ cloud_user }}"
+  gather_facts: yes
+  become: false
+  collections:
+    - ansible.builtin
+    - openstack.cloud
+
+  tasks:
+    - import_tasks: tasks/playbook_retrieve_facts_vms.yaml
+
+###############################################################
+### Play 4: Install packages on Cloud VMs
+###############################################################
+
+- name: "Install packages on Cloud VMs"
+  hosts: CloudVMs
+  remote_user: "{{ cloud_user }}"
+  become: true
+  gather_facts: no
+  collections:
+    - ansible.builtin
+
+  tasks:
+    - import_tasks: tasks/playbook_install_apt_packages.yaml
+    - import_tasks: tasks/playbook_install_pip_packages.yaml
+
+###############################################################
+### Play 5: Install Docker on Cloud VMs
+###############################################################
+
+- name: "Install Docker on Cloud VMs"
+  hosts: CloudVMs
+  remote_user: "{{ cloud_user }}"
+  gather_facts: yes
+  become: true
+  collections:
+    - ansible.builtin
+
+  tasks:
+    - import_tasks: tasks/playbook_install_docker.yaml
+
+###############################################################
+### Play 6: Download and Install Kafka
+###############################################################
+
+- name: "Download Kafka locally"
+  hosts: LocalMC
+  remote_user: "{{ local_user }}"
+  gather_facts: no
+  become: false
+  collections:
+    - ansible.builtin
+
+  tasks:
+    - import_tasks: tasks/playbook_download_kafka.yaml
+
+- name: "Install Kafka on Cloud VMs"
+  hosts: CloudVMs
+  remote_user: "{{ cloud_user }}"
+  gather_facts: no
+  become: true
+  collections:
+    - ansible.builtin
+
+  tasks:
+    - import_tasks: tasks/playbook_install_kafka.yaml
+
+###############################################################
+### Play 7: Set Firewall Rules
+###############################################################
+
+- name: "Configure Firewall policies"
+  hosts: CloudVMs
+  remote_user: "{{ cloud_user }}"
+  become: true
+  gather_facts: no
+  collections:
+    - ansible.builtin
+
+  tasks:
+    - import_tasks: tasks/playbook_set_firewalld_rules.yaml

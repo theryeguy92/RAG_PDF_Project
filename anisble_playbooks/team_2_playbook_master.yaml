@@ -1,0 +1,100 @@
+---
+# Author: Aniruddha Gokhale
+# CS4287/5287 Principles of Cloud Computing
+# Created: Fall 2024
+# Purpose: Master playbook for deploying cloud VMs, installing packages, and configuring services
+
+################################################################
+### Play 1: Check if required variables are defined or not.
+################################################################
+- name: "Check if required variables that drive the deployment are defined"
+  hosts: LocalMC
+  remote_user: "{{ local_user }}"
+  gather_facts: false  # Use 'false' instead of 'no'
+  tasks:
+    - name: "Import check variables playbook"
+      ansible.builtin.import_tasks: tasks/playbook_check_variables.yaml
+
+#####################################################
+### Play 2: Create VMs on the Cloud
+#####################################################
+- name: "Play 2: Create VMs on Chameleon"
+  hosts: LocalMC
+  remote_user: "{{ local_user }}"
+  gather_facts: false
+  become: false
+  tasks:
+    - name: "Import create VMs playbook"
+      ansible.builtin.import_tasks: tasks/playbook_create_vms.yaml
+
+#####################################################
+### Play 3: Get facts from Cloud VM
+#####################################################
+- name: "Play 3: Perform fact gathering on all Cloud VMs"
+  hosts: LocalMC
+  remote_user: "{{ local_user }}"
+  gather_facts: false
+  become: false
+  tasks:
+    - name: "Import retrieve facts playbook"
+      ansible.builtin.import_tasks: tasks/playbook_retrieve_facts_vms.yaml
+
+#####################################################
+### Play 4: Install packages on our Cloud VMs
+#####################################################
+- name: "Play 4 - Install various packages on Cloud VMs"
+  hosts: CloudVMs
+  remote_user: "{{ cloud_user }}"
+  become: true
+  gather_facts: false
+  tasks:
+    - name: "Install apt packages"
+      ansible.builtin.import_tasks: tasks/playbook_install_apt_packages.yaml
+
+    - name: "Install pip packages"
+      ansible.builtin.import_tasks: tasks/playbook_install_pip_packages.yaml
+
+#####################################################
+### Play 5: Install Docker on our Cloud VMs
+#####################################################
+- name: "Play 5 - Install Docker on Cloud VMs"
+  hosts: CloudVMs
+  remote_user: "{{ cloud_user }}"
+  gather_facts: true
+  become: true
+  tasks:
+    - name: "Install Docker"
+      ansible.builtin.import_tasks: tasks/playbook_install_docker.yml
+
+#####################################################
+### Play 6: Download and Install Kafka on our Cloud VMs
+#####################################################
+- name: "Play 6a - Download Kafka locally"
+  hosts: LocalMC
+  remote_user: "{{ local_user }}"
+  gather_facts: false
+  become: false
+  tasks:
+    - name: "Download Kafka"
+      ansible.builtin.import_tasks: tasks/playbook_download_kafka.yaml
+
+- name: "Play 6b - Install Kafka on Cloud VMs"
+  hosts: CloudVMs
+  remote_user: "{{ cloud_user }}"
+  gather_facts: false
+  become: true
+  tasks:
+    - name: "Install Kafka"
+      ansible.builtin.import_tasks: tasks/playbook_install_kafka.yaml
+
+#####################################################
+### Play 7: Set firewalld rules
+#####################################################
+- name: "Play 7 - Handle Firewalld policies"
+  hosts: CloudVMs
+  remote_user: "{{ cloud_user }}"
+  become: true
+  gather_facts: false
+  tasks:
+    - name: "Set Firewalld Rules"
+      ansible.builtin.import_tasks: tasks/playbook_set_firewalld_rules.yaml

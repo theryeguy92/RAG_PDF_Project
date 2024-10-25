@@ -1,0 +1,26 @@
+---
+- name: "Install firewalld"
+  yum:
+    name: firewalld
+    state: present
+
+- name: "Start firewalld"
+  service:
+    name: firewalld
+    state: started
+    enabled: true
+
+- name: "Allow SSH through the firewall"
+  firewalld:
+    service: ssh
+    state: enabled
+    permanent: yes
+
+- name: "Allow Kafka ports through the firewall"
+  firewalld:
+    port: "{{ item }}"
+    state: enabled
+    permanent: yes
+  loop:
+    - "9092/tcp"
+    - "2181/tcp"
