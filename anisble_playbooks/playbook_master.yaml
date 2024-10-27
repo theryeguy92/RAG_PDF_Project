@@ -1,7 +1,9 @@
 # playbook_master.yaml
 
 # Author: Aniruddha Gokhale
+
 # CS4287/5287 Principles of Cloud Computing
+
 # Created: Fall 2024
 
 # Purpose: Provide a master playbook that imports individual tasks.
@@ -71,7 +73,21 @@
 
     - name: "Extract internal IPs of VMs"
       set_fact:
-        vm_internal_ips_dict: "{{ dict(vm_info.results | map(attribute='server.addresses.CH-822922-net[0].addr') | zip(vm_info.results | map(attribute='server.name')) | map('reverse') | list) }}"
+        vm_internal_ips_dict: >-
+          {{
+            dict(
+              vm_info.results | map(attribute='server.name') | zip(
+                vm_info.results
+                | map(attribute='server.addresses')
+                | map('dict2items')
+                | map('map', attribute='value')
+                | map('flatten')
+                | map('selectattr', 'OS-EXT-IPS:type', 'equalto', 'fixed')
+                | map('map', attribute='addr')
+                | map('first')
+              )
+            )
+          }}
 
     - name: "Debug vm_internal_ips_dict with internal IPs"
       debug:
@@ -88,7 +104,48 @@
       loop: "{{ vm_internal_ips_dict | dict2items }}"
 
 ###############################################################
-### Play 3: Gather facts from Cloud VMs
+### Play 3: Install packages on Cloud VMs and copy OpenStack config
+###############################################################
+
+- name: "Install packages and copy OpenStack config to Cloud VMs"
+  hosts: CloudVMs
+  remote_user: "{{ cloud_user }}"
+  become: true
+  gather_facts: yes
+  collections:
+    - ansible.builtin
+
+  tasks:
+    - import_tasks: tasks/playbook_install_apt_packages.yaml
+    - import_tasks: tasks/playbook_install_pip_packages.yaml
+
+    - name: "Create directory for OpenStack config"
+      file:
+        path: "/home/{{ cloud_user }}/.config/openstack"
+        state: directory
+        owner: "{{ cloud_user }}"
+        group: "{{ cloud_user }}"
+        mode: '0755'
+
+    - name: "Copy clouds.yaml to VMs"
+      become: false
+      delegate_to: localhost
+      copy:
+        src: "/home/ryan/.config/openstack/clouds.yaml"
+        dest: "/home/{{ cloud_user }}/.config/openstack/clouds.yaml"
+        owner: "{{ cloud_user }}"
+        group: "{{ cloud_user }}"
+        mode: '0600'
+
+    - name: "Set OS_CLOUD environment variable"
+      lineinfile:
+        path: "/home/{{ cloud_user }}/.bashrc"
+        line: "export OS_CLOUD={{ openstack_cloud }}"
+        create: yes
+      become: false
+
+###############################################################
+### Play 4: Gather facts from Cloud VMs
 ###############################################################
 
 - name: "Perform fact gathering on Cloud VMs"
@@ -102,22 +159,6 @@
 
   tasks:
     - import_tasks: tasks/playbook_retrieve_facts_vms.yaml
-
-###############################################################
-### Play 4: Install packages on Cloud VMs
-###############################################################
-
-- name: "Install packages on Cloud VMs"
-  hosts: CloudVMs
-  remote_user: "{{ cloud_user }}"
-  become: true
-  gather_facts: no
-  collections:
-    - ansible.builtin
-
-  tasks:
-    - import_tasks: tasks/playbook_install_apt_packages.yaml
-    - import_tasks: tasks/playbook_install_pip_packages.yaml
 
 ###############################################################
 ### Play 5: Install Docker on Cloud VMs
