@@ -21,12 +21,12 @@
       {{
         dict(
           vm_facts.results
-          | map('extract', 'openstack_servers')
+          | map(attribute='servers')
           | map('first')
           | map(attribute='name')
           | zip(
             vm_facts.results
-            | map('extract', 'openstack_servers')
+            | map(attribute='servers')
             | map('first')
             | map(attribute='addresses')
             | map('dict2items')
