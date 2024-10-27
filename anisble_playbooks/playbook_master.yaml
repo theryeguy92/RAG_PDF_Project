@@ -126,10 +126,10 @@
         owner: "{{ cloud_user }}"
         group: "{{ cloud_user }}"
         mode: '0755'
+      become: true
 
     - name: "Copy clouds.yaml to VMs"
-      become: false
-      delegate_to: localhost
+      become: true
       copy:
         src: "/home/ryan/.config/openstack/clouds.yaml"
         dest: "/home/{{ cloud_user }}/.config/openstack/clouds.yaml"
@@ -138,27 +138,27 @@
         mode: '0600'
 
     - name: "Set OS_CLOUD environment variable"
+      become: true
       lineinfile:
         path: "/home/{{ cloud_user }}/.bashrc"
         line: "export OS_CLOUD={{ openstack_cloud }}"
         create: yes
-      become: false
 
-###############################################################
-### Play 4: Gather facts from Cloud VMs
-###############################################################
+# ###############################################################
+# ### Play 4: Gather facts from Cloud VMs
+# ###############################################################
 
-- name: "Perform fact gathering on Cloud VMs"
-  hosts: CloudVMs
-  remote_user: "{{ cloud_user }}"
-  gather_facts: yes
-  become: false
-  collections:
-    - ansible.builtin
-    - openstack.cloud
+# - name: "Perform fact gathering on Cloud VMs"
+#   hosts: CloudVMs
+#   remote_user: "{{ cloud_user }}"
+#   gather_facts: yes
+#   become: false
+#   collections:
+#     - ansible.builtin
+#     - openstack.cloud
 
-  tasks:
-    - import_tasks: tasks/playbook_retrieve_facts_vms.yaml
+#   tasks:
+#     - import_tasks: tasks/playbook_retrieve_facts_vms.yaml
 
 ###############################################################
 ### Play 5: Install Docker on Cloud VMs
@@ -215,3 +215,18 @@
 
   tasks:
     - import_tasks: tasks/playbook_set_firewalld_rules.yaml
+
+###############################################################
+### Play 8: Gather IP addresses of VMs on Control Node
+###############################################################
+
+- name: "Gather IP addresses of the VMs on Control Node"
+  hosts: LocalMC
+  remote_user: "{{ local_user }}"
+  gather_facts: no
+  become: false
+  collections:
+    - openstack.cloud
+
+  tasks:
+    - import_tasks: tasks/playbook_retrieve_facts_vms.yaml

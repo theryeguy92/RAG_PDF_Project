@@ -1,4 +1,5 @@
----
+# tasks/playbook_retrieve_facts_vms.yaml
+
 - name: "Gather IP addresses of the VMs"
   openstack.cloud.server_info:
     cloud: "{{ openstack_cloud }}"
@@ -10,6 +11,34 @@
     - "vm4_team2"
   register: vm_facts
 
+- name: "Debug vm_facts"
+  debug:
+    var: vm_facts
+
 - name: "Set the IP addresses as variables"
   set_fact:
-    vm_ips: "{{ vm_facts.results | map(attribute='interface_ip') }}"
+    vm_ips_dict: >-
+      {{
+        dict(
+          vm_facts.results
+          | map('extract', 'openstack_servers')
+          | map('first')
+          | map(attribute='name')
+          | zip(
+            vm_facts.results
+            | map('extract', 'openstack_servers')
+            | map('first')
+            | map(attribute='addresses')
+            | map('dict2items')
+            | map('map', attribute='value')
+            | map('flatten')
+            | map('selectattr', 'OS-EXT-IPS:type', 'equalto', 'fixed')
+            | map('map', attribute='addr')
+            | map('first')
+          )
+        )
+      }}
+
+- name: "Debug vm_ips_dict"
+  debug:
+    var: vm_ips_dict
