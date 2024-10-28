@@ -1,8 +1,9 @@
 ---
-- name: "Install firewalld"
-  yum:
+- name: Install firewalld
+  apt:
     name: firewalld
     state: present
+    update_cache: yes
 
 - name: "Start firewalld"
   service:
