@@ -107,17 +107,44 @@
 ### Play 3: Install packages on Cloud VMs and copy OpenStack config
 ###############################################################
 
-- name: "Install packages and copy OpenStack config to Cloud VMs"
+- name: "Install packages and copy OpenStack config to Cloud VMs with retries"
   hosts: CloudVMs
   remote_user: "{{ cloud_user }}"
   become: true
-  gather_facts: yes
+  gather_facts: no  # Initially set to 'no' to control when facts are gathered
   collections:
     - ansible.builtin
 
   tasks:
-    - import_tasks: tasks/playbook_install_apt_packages.yaml
-    - import_tasks: tasks/playbook_install_pip_packages.yaml
+    - name: "Wait for SSH to be available on all Cloud VMs"
+      wait_for_connection:
+        delay: 10
+        timeout: 300
+      register: wait_result
+      until: wait_result is succeeded
+      retries: 5
+      delay: 15
+
+    - name: "Gather facts after ensuring SSH is available"
+      setup:
+      register: setup_status
+      until: setup_status is succeeded
+      retries: 3
+      delay: 10
+
+    - name: "Install required apt packages with retries"
+      import_tasks: tasks/playbook_install_apt_packages.yaml
+      register: apt_result
+      until: apt_result is succeeded
+      retries: 3
+      delay: 10
+
+    - name: "Install required pip packages with retries"
+      import_tasks: tasks/playbook_install_pip_packages.yaml
+      register: pip_result
+      until: pip_result is succeeded
+      retries: 3
+      delay: 10
 
     - name: "Create directory for OpenStack config"
       file:
@@ -126,19 +153,16 @@
         owner: "{{ cloud_user }}"
         group: "{{ cloud_user }}"
         mode: '0755'
-      become: true
 
     - name: "Copy clouds.yaml to VMs"
-      become: true
       copy:
-        src: "/home/ryan/.config/openstack/clouds.yaml"
+        src: "/home/{{ local_user }}/.config/openstack/clouds.yaml"
         dest: "/home/{{ cloud_user }}/.config/openstack/clouds.yaml"
         owner: "{{ cloud_user }}"
         group: "{{ cloud_user }}"
         mode: '0600'
 
     - name: "Set OS_CLOUD environment variable"
-      become: true
       lineinfile:
         path: "/home/{{ cloud_user }}/.bashrc"
         line: "export OS_CLOUD={{ openstack_cloud }}"
