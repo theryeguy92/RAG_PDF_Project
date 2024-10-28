@@ -17,6 +17,14 @@ local_user=ryan  # Define the local user variable here
 [CloudVMs]
 # IP addresses will be added here dynamically by the playbook
 
+[K8sMaster]
+vm1_team2
+
+[K8sWorkers]
+vm2_team2
+vm3_team2
+vm4_team2
+
 [CloudVMs:vars]
 ansible_user=cc
 ansible_connection=ssh

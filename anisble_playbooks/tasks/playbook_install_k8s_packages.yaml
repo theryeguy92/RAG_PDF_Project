@@ -1,0 +1,31 @@
+- name: Install Kubernetes apt repository GPG key
+  apt_key:
+    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    state: present
+
+- name: Add Kubernetes apt repository
+  apt_repository:
+    repo: "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+    state: present
+
+- name: Install Kubernetes packages
+  apt:
+    name:
+      - kubelet
+      - kubeadm
+      - kubectl
+    state: latest
+    update_cache: yes
+
+- name: Hold Kubernetes packages at current version
+  apt:
+    name:
+      - kubelet
+      - kubeadm
+      - kubectl
+    state: hold
+# # Include any pip packages if necessary
+# - name: Install required pip packages
+#   pip:
+#     name: <package_name>
+#     state: latest

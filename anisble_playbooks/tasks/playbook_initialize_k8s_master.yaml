@@ -1,0 +1,16 @@
+- name: Initialize Kubernetes Master
+  command: kubeadm init --pod-network-cidr=10.244.0.0/16
+  args:
+    creates: /etc/kubernetes/admin.conf
+
+- name: Set up kubeconfig for regular user
+  command: "{{ item }}"
+  with_items:
+    - mkdir -p $HOME/.kube
+    - cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+    - chown $(id -u):$(id -g) $HOME/.kube/config
+
+- name: Install Calico Network Plugin
+  kubernetes.core.k8s:
+    state: present
+    src: https://docs.projectcalico.org/manifests/calico.yaml

@@ -230,3 +230,79 @@
 
   tasks:
     - import_tasks: tasks/playbook_retrieve_facts_vms.yaml
+
+###############################################################
+### Play 9: Install Kubernetes Packages on Cloud VMs
+###############################################################
+
+- name: "Install Kubernetes on Cloud VMs"
+  hosts: CloudVMs
+  remote_user: "{{ cloud_user }}"
+  gather_facts: yes
+  become: true
+  collections:
+    - ansible.builtin
+
+  tasks:
+    - import_tasks: tasks/playbook_install_k8s_packages.yaml
+
+###############################################################
+### Play 10: Set Up Private Docker Registry on VM1
+###############################################################
+
+- name: "Set Up Private Docker Registry on VM1"
+  hosts: vm1_team2
+  remote_user: "{{ cloud_user }}"
+  gather_facts: yes
+  become: true
+  collections:
+    - ansible.builtin
+
+  tasks:
+    - import_tasks: tasks/playbook_setup_private_registry.yaml
+
+###############################################################
+### Play 11: Disable Swap on Cloud VMs
+###############################################################
+
+- name: "Disable Swap on Cloud VMs"
+  hosts: CloudVMs
+  remote_user: "{{ cloud_user }}"
+  gather_facts: yes
+  become: true
+  collections:
+    - ansible.builtin
+
+  tasks:
+    - import_tasks: tasks/playbook_disable_swap.yaml
+
+###############################################################
+### Play 12: Initialize Kubernetes Master on VM1
+###############################################################
+
+- name: "Initialize Kubernetes Master on VM1"
+  hosts: vm1_team2
+  remote_user: "{{ cloud_user }}"
+  gather_facts: yes
+  become: true
+  collections:
+    - ansible.builtin
+    - kubernetes.core
+
+  tasks:
+    - import_tasks: tasks/playbook_initialize_k8s_master.yaml
+
+###############################################################
+### Play 13: Join Worker Nodes to Kubernetes Cluster
+###############################################################
+
+- name: "Join Worker Nodes to Kubernetes Cluster"
+  hosts: CloudVMs
+  remote_user: "{{ cloud_user }}"
+  gather_facts: yes
+  become: true
+  collections:
+    - ansible.builtin
+
+  tasks:
+    - import_tasks: tasks/playbook_join_k8s_worker.yaml
