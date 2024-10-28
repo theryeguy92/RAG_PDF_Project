@@ -1,25 +1,34 @@
 ---
-- name: "Ensure UFW is installed"
-  apt:
-    name: ufw
+- name: "Install firewalld"
+  yum:
+    name: firewalld
     state: present
-    update_cache: yes
+
+- name: "Start firewalld"
+  service:
+    name: firewalld
+    state: started
+    enabled: true
+
+- name: "Ensure port 22 is open"
+  firewalld:
+    port: 22/tcp
+    permanent: yes
+    state: enabled
+  become: true
+
 
 - name: "Allow SSH through the firewall"
-  ufw:
-    rule: allow
-    name: OpenSSH
+  firewalld:
+    service: ssh
+    state: enabled
+    permanent: yes
 
 - name: "Allow Kafka ports through the firewall"
-  ufw:
-    rule: allow
+  firewalld:
     port: "{{ item }}"
-    proto: tcp
-  loop:
-    - 9092
-    - 2181
-
-- name: "Enable UFW"
-  ufw:
     state: enabled
-    logging: 'on'
+    permanent: yes
+  loop:
+    - "9092/tcp"
+    - "2181/tcp"

@@ -209,7 +209,7 @@
   hosts: CloudVMs
   remote_user: "{{ cloud_user }}"
   become: true
-  gather_facts: yes
+  gather_facts: no
   collections:
     - ansible.builtin
 
