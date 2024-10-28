@@ -23,6 +23,7 @@ vm1_team2
 [K8sWorkers]
 vm2_team2
 vm3_team2
+vm4_team2
 
 ; [CloudVMs:vars]
 ; ansible_user=cc

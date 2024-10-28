@@ -1,31 +1,45 @@
-- name: Install Kubernetes apt repository GPG key
-  apt_key:
+# tasks/playbook_install_k8s_packages.yaml
+
+- name: "Install dependencies"
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+    state: present
+    update_cache: yes
+
+- name: "Add Kubernetes apt repository GPG key"
+  get_url:
     url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
-    state: present
+    dest: /usr/share/keyrings/kubernetes-archive-keyring.gpg
+    mode: '0644'
 
-- name: Add Kubernetes apt repository
+- name: "Add Kubernetes apt repository"
   apt_repository:
-    repo: "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+    repo: "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main"
     state: present
+    filename: kubernetes.list
+    update_cache: yes
 
-- name: Install Kubernetes packages
+- name: "Install Kubernetes packages"
   apt:
     name:
       - kubelet
       - kubeadm
       - kubectl
-    state: latest
+    state: present
     update_cache: yes
+    allow_unauthenticated: no
+  notify:
+    - Hold Kubernetes packages at current version
 
-- name: Hold Kubernetes packages at current version
+- name: "Hold Kubernetes packages at current version"
   apt:
     name:
       - kubelet
       - kubeadm
       - kubectl
     state: hold
-# # Include any pip packages if necessary
-# - name: Install required pip packages
-#   pip:
-#     name: <package_name>
-#     state: latest
