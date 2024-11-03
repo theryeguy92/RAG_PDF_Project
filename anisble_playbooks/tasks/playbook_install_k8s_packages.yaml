@@ -52,8 +52,7 @@
 
 - name: Install containerd
   apt:
-    name:
-      - containerd.io
+    name: containerd
     state: present
     update_cache: yes
 
@@ -63,18 +62,23 @@
     state: directory
 
 - name: Generate default containerd configuration
-  shell: |
-    containerd config default > /etc/containerd/config.toml
+  command: containerd config default > /etc/containerd/config.toml
   args:
     creates: /etc/containerd/config.toml
   become: true
 
-- name: Enable `cri` plugin in containerd
-  lineinfile:
+- name: Set cgroup driver to systemd in containerd config
+  replace:
     path: /etc/containerd/config.toml
-    regexp: '^(\s*)#(version = 2)'
-    line: 'version = 2'
-  notify: Restart containerd
+    regexp: '^(\s*)SystemdCgroup = false'
+    replace: '\1SystemdCgroup = true'
+  become: true
+
+- name: Restart and enable containerd service
+  systemd:
+    name: containerd
+    state: restarted
+    enabled: yes
 
 - name: Ensure br_netfilter and overlay modules are loaded
   copy:
