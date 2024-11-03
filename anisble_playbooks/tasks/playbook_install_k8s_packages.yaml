@@ -1,6 +1,16 @@
 # tasks/playbook_install_k8s_packages.yaml
 
-- name: "Install dependencies"
+- name: Remove old Kubernetes repository file
+  file:
+    path: /etc/apt/sources.list.d/kubernetes.list
+    state: absent
+
+- name: Remove old Kubernetes GPG key
+  file:
+    path: /etc/apt/keyrings/kubernetes-archive-keyring.gpg
+    state: absent
+
+- name: Install dependencies
   apt:
     name:
       - apt-transport-https
@@ -11,20 +21,27 @@
     state: present
     update_cache: yes
 
-- name: "Add Kubernetes apt repository GPG key"
-  get_url:
-    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
-    dest: /usr/share/keyrings/kubernetes-archive-keyring.gpg
-    mode: '0644'
+- name: Create directory for apt keyrings
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
 
-- name: "Add Kubernetes apt repository"
+- name: Download and dearmor Kubernetes GPG key
+  shell: |
+    curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-archive-keyring.gpg
+  args:
+    executable: /bin/bash
+    creates: /etc/apt/keyrings/kubernetes-archive-keyring.gpg
+
+- name: Add Kubernetes apt repository
   apt_repository:
-    repo: "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main"
+    repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /"
     state: present
     filename: kubernetes.list
     update_cache: yes
 
-- name: "Install Kubernetes packages"
+- name: Install Kubernetes packages
   apt:
     name:
       - kubelet
@@ -32,14 +49,17 @@
       - kubectl
     state: present
     update_cache: yes
-    allow_unauthenticated: no
-  notify:
-    - Hold Kubernetes packages at current version
 
-- name: "Hold Kubernetes packages at current version"
+- name: Hold Kubernetes packages at current version
   apt:
     name:
       - kubelet
       - kubeadm
       - kubectl
     state: hold
+
+- name: Enable and start kubelet service
+  systemd:
+    name: kubelet
+    enabled: yes
+    state: started
