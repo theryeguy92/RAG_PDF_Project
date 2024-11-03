@@ -5,27 +5,26 @@
     state: present
     update_cache: yes
 
-- name: "Start firewalld"
+- name: Start firewalld
   service:
     name: firewalld
     state: started
     enabled: true
 
-- name: "Ensure port 22 is open"
+- name: Ensure port 22 is open
   firewalld:
     port: 22/tcp
     permanent: yes
     state: enabled
   become: true
 
-
-- name: "Allow SSH through the firewall"
+- name: Allow SSH through the firewall
   firewalld:
     service: ssh
     state: enabled
     permanent: yes
 
-- name: "Allow Kafka ports through the firewall"
+- name: Allow Kafka ports through the firewall
   firewalld:
     port: "{{ item }}"
     state: enabled
@@ -37,6 +36,13 @@
 - name: Open port 6443 for Kubernetes API Server
   firewalld:
     port: 6443/tcp
+    permanent: yes
+    state: enabled
+    immediate: yes
+
+- name: Open port 10250 for kubelet
+  firewalld:
+    port: 10250/tcp
     permanent: yes
     state: enabled
     immediate: yes

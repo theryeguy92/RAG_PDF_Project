@@ -269,6 +269,12 @@
 
   tasks:
     - import_tasks: tasks/playbook_install_k8s_packages.yaml
+  
+  handlers:
+    - name: Restart containerd
+      systemd:
+        name: containerd
+        state: restarted
 
 ###############################################################
 ### Play 10: Set Up Private Docker Registry on VM1
