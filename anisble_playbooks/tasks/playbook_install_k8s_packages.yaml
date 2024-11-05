@@ -50,10 +50,11 @@
     state: present
     update_cache: yes
 
-- name: Install containerd
+- name: Install containerd and cri-tools
   apt:
     name:
       - containerd.io
+      - cri-tools
     state: present
     update_cache: yes
 
@@ -62,13 +63,28 @@
     path: /etc/containerd
     state: directory
 
-- name: Generate default containerd configuration
-  shell: |
-    containerd config default > /etc/containerd/config.toml
-  args:
-    creates: /etc/containerd/config.toml
-    executable: /bin/bash
-  become: true
+- name: Deploy static containerd config.toml compatible with Kubernetes
+  copy:
+    dest: /etc/containerd/config.toml
+    content: |
+      version = 2
+      [plugins]
+        [plugins."io.containerd.grpc.v1.cri"]
+          sandbox_image = "registry.k8s.io/pause:3.9"
+          [plugins."io.containerd.grpc.v1.cri".containerd]
+            snapshotter = "overlayfs"
+            default_runtime_name = "runc"
+            no_pivot = false
+          [plugins."io.containerd.grpc.v1.cri".cni]
+            bin_dir = "/opt/cni/bin"
+            conf_dir = "/etc/cni/net.d"
+          [plugins."io.containerd.grpc.v1.cri".registry]
+            [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+              [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+                endpoint = ["https://registry-1.docker.io"]
+              [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry.k8s.io"]
+                endpoint = ["https://registry.k8s.io"]
+  notify: Restart containerd
 
 - name: Restart and enable containerd service
   systemd:
@@ -112,3 +128,7 @@
     name: kubelet
     enabled: yes
     state: started
+
+- name: Pre-pull Kubernetes images
+  command: kubeadm config images pull
+  become: true
