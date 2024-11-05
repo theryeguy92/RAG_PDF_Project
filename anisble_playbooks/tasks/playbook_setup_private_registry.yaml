@@ -3,7 +3,7 @@
     name: registry
     tag: latest
     source: pull
-  become: yes
+  #become: yes
 
 - name: Run private Docker registry container
   docker_container:
@@ -15,4 +15,4 @@
       - "5000:5000"
     volumes:
       - /var/lib/registry:/var/lib/registry
-    become: yes
+    #become: yes

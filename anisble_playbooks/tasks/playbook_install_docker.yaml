@@ -51,6 +51,16 @@
     state: present
     update_cache: yes
 
+- name: "Check if Docker service is masked"
+  shell: "systemctl is-enabled docker"
+  register: docker_service_status
+  ignore_errors: yes
+
+- name: "Unmask Docker service if masked"
+  command: "systemctl unmask docker"
+  when: docker_service_status.stdout == "masked"
+  ignore_errors: yes
+
 - name: "Start Docker service"
   service:
     name: docker

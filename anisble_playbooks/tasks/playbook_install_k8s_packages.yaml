@@ -52,7 +52,8 @@
 
 - name: Install containerd
   apt:
-    name: containerd
+    name:
+      - containerd.io
     state: present
     update_cache: yes
 
@@ -62,16 +63,11 @@
     state: directory
 
 - name: Generate default containerd configuration
-  command: containerd config default > /etc/containerd/config.toml
+  shell: |
+    containerd config default > /etc/containerd/config.toml
   args:
     creates: /etc/containerd/config.toml
-  become: true
-
-- name: Set cgroup driver to systemd in containerd config
-  replace:
-    path: /etc/containerd/config.toml
-    regexp: '^(\s*)SystemdCgroup = false'
-    replace: '\1SystemdCgroup = true'
+    executable: /bin/bash
   become: true
 
 - name: Restart and enable containerd service
