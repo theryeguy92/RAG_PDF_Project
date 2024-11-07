@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: producer
+spec:
+  template:
+    metadata:
+      labels:
+        app: producer
+    spec:
+      containers:
+      - name: producer
+        image: 192.168.5.146:5000/producer:latest
+        env:
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: kafka:9092
+        - name: SAMPLES_COUNT
+          value: "1000"  # Change as needed
+        - name: SAMPLE_RATE
+          value: "1"     # Sample per second
+      restartPolicy: Never
+
