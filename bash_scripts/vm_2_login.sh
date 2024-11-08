@@ -7,7 +7,7 @@ BASTION_KEY="/home/parallels/.ssh/F24_BASTION.pem"
 
 # Target server
 TARGET_USER="cc"
-TARGET_IP="192.168.5.161" # NOTE: Plug in the IP of the VM
+TARGET_IP="192.168.5.49" # NOTE: Plug in the IP of the VM
 TARGET_KEY="/home/parallels/.ssh/key_team2.pem"
 
 # Execute the SSH connection
