@@ -14,6 +14,6 @@ spec:
     spec:
       containers:
       - name: ml-inference
-        image: 192.168.5.146:5000/ml_inference:latest
+        image: 192.168.5.133:5000/ml_inference:latest
         ports:
         - containerPort: 5000

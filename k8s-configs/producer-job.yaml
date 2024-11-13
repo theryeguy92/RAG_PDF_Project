@@ -10,7 +10,7 @@ spec:
     spec:
       containers:
       - name: producer
-        image: 192.168.5.146:5000/producer:latest
+        image: 192.168.5.133:5000/producer:latest
         env:
         - name: KAFKA_BOOTSTRAP_SERVERS
           value: kafka:9092
