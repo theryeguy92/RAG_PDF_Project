@@ -1,11 +1,12 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: zookeeper
   labels:
     app: zookeeper
 spec:
-  replicas: 1
+  serviceName: "zookeeper-service"
+  replicas: 3
   selector:
     matchLabels:
       app: zookeeper
@@ -14,13 +15,75 @@ spec:
       labels:
         app: zookeeper
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                - vm2-team2
+      initContainers:
+      - name: set-my-id
+        image: busybox:latest
+        command:
+        - sh
+        - -c
+        - "echo $((${HOSTNAME##*-} + 1)) > /data/myid"
+        volumeMounts:
+        - name: zookeeper-data
+          mountPath: /data
       containers:
       - name: zookeeper
         image: zookeeper:3.6.3
         ports:
         - containerPort: 2181
+        - containerPort: 2888
+        - containerPort: 3888
         env:
         - name: ZOO_MY_ID
-          value: "1"
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
         - name: ZOO_SERVERS
-          value: "server.1=zookeeper:2888:3888"
+          value: |
+            server.1=zookeeper-0.zookeeper-service:2888:3888
+            server.2=zookeeper-1.zookeeper-service:2888:3888
+            server.3=zookeeper-2.zookeeper-service:2888:3888
+        - name: ZOO_AUTOPURGE_PURGE_INTERVAL
+          value: "1"
+        - name: ZOO_AUTOPURGE_SNAP_RETAIN_COUNT
+          value: "3"
+        - name: ZOO_TICK_TIME
+          value: "2000"
+        - name: ZOOKEEPER_ELECTION_PORT_BIND_RETRY
+          value: "10"
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - echo ruok | nc localhost 2181 | grep imok
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - echo ruok | nc localhost 2181 | grep imok
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: zookeeper-data
+          mountPath: /data
+        - name: zookeeper-datalog
+          mountPath: /datalog
+      volumes:
+      - name: zookeeper-data
+        persistentVolumeClaim:
+          claimName: zookeeper-data
+      - name: zookeeper-datalog
+        persistentVolumeClaim:
+          claimName: zookeeper-datalog
