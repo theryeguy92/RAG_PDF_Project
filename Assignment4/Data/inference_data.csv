@@ -1,0 +1,7 @@
+producer_id,image_id,inference_result
+producer_1,img_001,correct
+producer_1,img_002,wrong
+producer_2,img_003,wrong
+producer_3,img_004,correct
+producer_2,img_005,wrong
+producer_1,img_006,wrong
