@@ -1,3 +1,4 @@
+import sys
 from pyspark.sql import SparkSession
 
 # Step 1: Initialize Spark session
@@ -5,21 +6,27 @@ spark = SparkSession.builder \
     .appName("InferenceErrorCount") \
     .getOrCreate()
 
-# Step 2: Load data
-# Replace 'data/inference_data.csv' with your actual file path or database connection
-data = spark.read.csv("Assignment4/Data/inference_data.csv", header=True, inferSchema=True)
+# Step 2: Get input file from command-line arguments
+if len(sys.argv) != 2:
+    print("Usage: python inference_mapreduce.py <input_file>")
+    sys.exit(1)
+
+input_file = sys.argv[1]
+
+# Load data
+data = spark.read.csv(input_file, header=True, inferSchema=True)
 
 # Step 3: MapReduce to count errors per producer
-# Filtering for rows where 'inference_result' is 'wrong'
 result = data.filter(data["inference_result"] == "wrong") \
              .groupby("producer_id") \
              .count()
 
 # Step 4: Save results
-# Save to output folder
-result.write.mode("overwrite").csv("Assignment4/output/error_counts", header=True)
+result.write.csv("output/error_counts", header=True, mode="overwrite")
+
 
 print("MapReduce completed. Results saved to 'output/error_counts'.")
 
 # Step 5: Stop Spark session
 spark.stop()
+
