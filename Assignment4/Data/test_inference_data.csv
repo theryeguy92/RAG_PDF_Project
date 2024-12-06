@@ -1,0 +1,10 @@
+producer_id,inference_result
+producer_1,correct
+producer_1,wrong
+producer_2,wrong
+producer_2,wrong
+producer_3,correct
+producer_3,correct
+producer_4,wrong
+producer_4,wrong
+producer_4,wrong
